@@ -17,7 +17,7 @@
        return '&#'+i.charCodeAt(0)+';';
       });
 
-      encodedStr = encodedStr.replace(/\W/g, '&nbsp;');
+      encodedStr = encodedStr.replace(/\s/g, '&nbsp;');
       return encodedStr;
     }
 
