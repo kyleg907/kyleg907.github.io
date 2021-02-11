@@ -4,10 +4,12 @@
     <script src="https://thunkable.github.io/webviewer-extension/thunkableWebviewerExtension.js" type="text/javascript"></script>
   </head>
   <body>
-    <div id="log"></div>
+    
+    <div id="log">Log messages from your Thunkable app via WebViewer component's Post Message function.</div>
     
   </body>
   <script type="text/javascript">
+    let msgCount = 0;
     
     function escape(html) {
       var encodedStr = html.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
@@ -19,9 +21,17 @@
 
     function logMessage(message) {
       const msgNode = document.getElementById('log')
+      
+      if (msgCount === 0) {
+        // Remove the hello message on first message to get back some space.
+        msgNode.innerHTML = "";
+      }
+      
       const msgDiv = document.createElement("div")
       msgDiv.innerHTML = escape(message);
       msgNode.appendChild(msgDiv);
+      
+      msgCount++;
     }
     
     // when we get a message from the app, display it on the page
