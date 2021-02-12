@@ -5,12 +5,16 @@
     <script src="https://thunkable.github.io/webviewer-extension/thunkableWebviewerExtension.js" type="text/javascript"></script>
   </head>
   <body>
-    
+    <button id="clearButton">Clear</button>
     <div id="log">Log messages from your Thunkable app via WebViewer component's Post Message function.</div>
     
   </body>
   <script type="text/javascript">
     let msgCount = 0;
+    
+    document.getElementById('clearButton').onclick = function() {
+      document.getElementById('log').innerHTML = "";
+    }
     
     function escape(html) {
       var encodedStr = html.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
