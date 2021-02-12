@@ -1,49 +1,207 @@
 <html>
-  <head>
-    <title>Thunkable Debug Message Logger</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://thunkable.github.io/webviewer-extension/thunkableWebviewerExtension.js" type="text/javascript"></script>
-  </head>
-  <body>
+<head>
+  <title>Thunkable Debug Message Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://thunkable.github.io/webviewer-extension/thunkableWebviewerExtension.js" type="text/javascript"></script>
+  
+  <style>
+    #log {
+      min-height: 10em;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .dialog {
+      display:;
+    }
+
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgb(0,0,0); /* Fallback color */
+      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+
+    /* Modal Content/Box */
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto; /* 15% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%; /* Could be more or less, depending on screen size */
+    }    
+
+    .modal-content button {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .close {
+      color: #aaaaaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+  </style>
+
+</head>
+<body>
+
+  <div id="log">Log messages from your Thunkable app via WebViewer component's Post Message function.<br/>
+  Click here for options.</div>
+
+  <!-- TODO format epoch, accept JSON and do some formatting
+  download
+-->
+<div id="myModal" class="modal">
+
+  <!-- Modal content -->
+  <div class="modal-content">
+    <span id='modalClose' class="close">&times;</span>
     <button id="clearButton">Clear</button>
-    <div id="log">Log messages from your Thunkable app via WebViewer component's Post Message function.</div>
-    
-  </body>
-  <script type="text/javascript">
-    let msgCount = 0;
-    
-    document.getElementById('clearButton').onclick = function() {
-      document.getElementById('log').innerHTML = "";
-    }
-    
-    function escape(html) {
-      var encodedStr = html.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
-       return '&#'+i.charCodeAt(0)+';';
-      });
+    <button id="pauseButton">Pause</button>
+    <button id="downloadButton">Download</button>
+    <input id="scrollCheck" name="Scroll" checked="true" type="checkbox"></input>
+    <label for="scrollCheck">Scroll</label>
+  </div>
 
-      encodedStr = encodedStr.replace(/\s/g, '&nbsp;');
-      return encodedStr;
+</div>
+
+
+</body>
+<script type="text/javascript">
+  var wasSomethingLogged = false;
+  var msgCount = 0;
+  var isPaused = false;
+  var isScroll = true;
+
+  const modalDiv = document.getElementById("myModal");
+  const logDiv = document.getElementById("log");
+  const pauseButton = document.getElementById('pauseButton');
+  const scrollCheck = document.getElementById('scrollCheck');
+
+  document.getElementById('clearButton').onclick = function() {
+    document.getElementById('log').innerHTML = "";
+    msgCount = 0;
+  }
+
+  pauseButton.onclick = function() {
+    isPaused = !isPaused;
+
+    console.log("Paused?", isPaused);
+
+    if (isPaused) {
+      pauseButton.innerText = 'Resume';
+    } else {
+      pauseButton.innerText = 'Pause';
+    }
+  }
+
+  scrollCheck.onclick = function() {
+    isScroll = scrollCheck.checked;
+    console.log("Scroll?", isScroll);
+  }
+
+  document.getElementById('downloadButton').onclick = function() {
+    var lines = retrieveLogAsText();
+    var data = new Blob(lines, {type: 'application/octet-stream'}, endings='native');
+    const objectUrl = URL.createObjectURL(data)
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.target = "_blank";
+    link.innerText = 'Open the array URL';
+
+    //modalDiv.appendChild(link);
+    window.open(objectUrl, "_blank");
+    setTimeout(function () {
+      URL.revokeObjectURL(objectUrl);
+    }, 2);
+  }
+
+  function retrieveLogAsText() {
+    lines = []
+
+    const nodes = logDiv.childNodes
+    for (let i = 0, l = nodes.length; i < l; ++i) {
+      lines.push(nodes[i].textContent + "\n")
     }
 
-    function logMessage(message) {
-      const msgNode = document.getElementById('log')
-      
-      if (msgCount === 0) {
+    console.log(lines);
+    return lines;
+  }
+
+
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function(event) {
+
+    if (event.target == modalDiv || event.target.className == 'close') {
+      modalDiv.style.display = "none";
+    } else if (event.target == logDiv || event.target.parentNode == logDiv) {
+      modalDiv.style.display = "block";
+    } else if (event.target.nodeName == 'a') {
+      event.target.remove();
+    }
+  }
+
+
+  function escape(html) {
+    var encodedStr = html.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
+     return '&#'+i.charCodeAt(0)+';';
+   });
+
+    encodedStr = encodedStr.replace(/\s/g, '&nbsp;');
+    return encodedStr;
+  }
+
+  function logMessage(message) {
+    if (isPaused) {
+      // We're paused, discard output until logging resumed.
+      return;
+    }
+
+    const logNode = document.getElementById('log')
+
+    if (!wasSomethingLogged) {
         // Remove the hello message on first message to get back some space.
-        msgNode.innerHTML = "";
-      }
-      
-      const msgDiv = document.createElement("div")
-      msgDiv.innerHTML = escape(message);
-      msgNode.appendChild(msgDiv);
-      
-      msgCount++;
+        logNode.innerHTML = "";
     }
-    
-    // when we get a message from the app, display it on the page
-    ThunkableWebviewerExtension.receiveMessage(function(message) {
-      logMessage(message)  
-    });
+      
+    const msgDiv = document.createElement("div")
+    msgDiv.innerHTML = escape(message);
+    logNode.appendChild(msgDiv);
+      
+    if (isScroll) {
+      msgDiv.scrollIntoView({block: "end"});
+    }
 
-  </script>
+    msgCount++;
+    wasSomethingLogged = true;
+  }
+    
+  // when we get a message from the app, display it on the page
+  ThunkableWebviewerExtension.receiveMessage(function(message) {
+    logMessage(message)  
+  });
+
+
+
+  function blurg(times) {
+
+    if (typeof times !== 'number') {
+      times = 50;
+    }
+    for (var i = 0; i < times; i++) {
+      logMessage(i + " foo");
+    }
+  }
+
+</script>
 </html>
